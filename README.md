@@ -13,16 +13,18 @@ An ecosystem of pluggable libraries, model providers, and testing utilities desi
 
 Currently, the aggregator [pom.xml](pom.xml) activates the following two core modules:
 
-### 1. `agentic-commons`
+### 1. [`agentic-commons`](agentic-commons/README.md)
 * **Artifact:** `agentic-commons`
+* **README:** [agentic-commons/README.md](agentic-commons/README.md)
 * **Purpose:** Provides reusable utilities for HTTP transport and security/authentication context when interfacing with GenAI endpoints.
 * **Key Features:**
   * Unified `HttpService` and `HttpClientProvider` wrappers.
   * Google Cloud / Vertex AI token management via `AccessTokenSupplier` (supporting both Application Default Credentials (ADC) and environment-variable configurations).
   * Common serialization and codec helpers.
 
-### 2. `model-prism`
+### 2. [`model-prism`](model-prism/README.md)
 * **Artifact:** `model-prism`
+* **README:** [model-prism/README.md](model-prism/README.md)
 * **Submodules:** `model-prism-core`, `model-prism-groq`, `model-prism-ollama`, `model-prism-openrouter`, `model-prism-vertex-gemini`, `model-prism-vertex-openai`, `model-prism-web`
 * **Purpose:** A pluggable LLM provider SPI and registry using Java `ServiceLoader`.
 * **Key Features:**
