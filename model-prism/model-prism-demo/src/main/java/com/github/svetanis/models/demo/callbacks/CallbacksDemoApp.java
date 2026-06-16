@@ -1,0 +1,47 @@
+package com.github.svetanis.models.demo.callbacks;
+
+import static com.github.svetanis.models.demo.DemoRunner.run;
+import static com.github.svetanis.models.demo.DemoRunner.showAgent;
+import static com.github.svetanis.models.demo.DemoRunner.showProviders;
+
+import java.util.List;
+
+import com.github.svetanis.models.demo.DemoRunner;
+import com.github.svetanis.models.spi.ModelProvider;
+import com.github.svetanis.models.spi.ModelProviderRegistry;
+import com.google.adk.agents.LlmAgent;
+
+/**
+ * Demo application for ADK agent callbacks (before/after model and tool hooks).
+ *
+ * <p>
+ * Runs two scenarios:
+ * <ol>
+ * <li><strong>Normal flow</strong> — asks for stock prices of AAPL and MSFT;
+ * all callbacks fire and the tool returns mock prices.</li>
+ * <li><strong>Guardrail block</strong> — asks for ticker "HACK"; the
+ * {@code beforeTool} callback intercepts and blocks the call.</li>
+ * </ol>
+ *
+ * @see CallbacksDemoAgent
+ * @see DemoCallbacks
+ */
+public final class CallbacksDemoApp {
+
+	public static void main(String[] args) {
+		// One call - discovers and registers ALL providers on the classpath
+		List<ModelProvider> registered = ModelProviderRegistry.registerAll();
+		showProviders(registered);
+		LlmAgent agent = new CallbacksDemoAgent(DemoRunner.MODEL).get();
+		// -- Run 1: normal flow -------------------------------------
+		String prompt1 = "What are the current prices of AAPL and MSFT?";
+		showAgent(agent, prompt1);
+		run(agent, prompt1);
+
+		// -- Run 2: guardrail blocks the tool call
+		// -------------------------------------
+		String prompt2 = "What is the price of HACK?";
+		showAgent(agent, prompt2);
+		run(agent, prompt2);
+	}
+}
