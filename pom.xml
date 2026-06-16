@@ -14,7 +14,6 @@
 
     <modules>
         <module>agentic-commons</module>
-        <module>agent-eval</module>
         <module>model-prism</module>
     </modules>
 
