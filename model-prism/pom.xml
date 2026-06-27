@@ -43,7 +43,7 @@
 
 		<!-- Google ADK -->
 		<!--<google.adk.version>1.4.0</google.adk.version>-->
-		<google.adk.version>1.4.1-SNAPSHOT</google.adk.version>
+		<google.adk.version>1.5.1-SNAPSHOT</google.adk.version>
 
 		<!-- Jackson -->
 		<!-- Jackson — must align with the jackson-annotations version that

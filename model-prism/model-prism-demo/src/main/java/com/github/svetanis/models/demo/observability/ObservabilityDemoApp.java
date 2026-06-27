@@ -2,19 +2,21 @@ package com.github.svetanis.models.demo.observability;
 
 import static com.github.svetanis.models.demo.DemoRunner.showAgent;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import com.github.svetanis.models.demo.DemoRunner;
 import com.github.svetanis.models.spi.ModelProviderRegistry;
+import com.github.svetanis.models.spi.UsageDigest;
 import com.google.adk.agents.LlmAgent;
-import com.google.adk.agents.RunConfig;
 import com.google.adk.plugins.agentanalytics.BigQueryAgentAnalyticsPlugin;
-import com.google.adk.plugins.agentanalytics.BigQueryLoggerConfig;
-import com.google.adk.runner.InMemoryRunner;
-import com.google.genai.types.Content;
-import com.google.genai.types.Part;
+
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 
 /**
  * Demo application for ADK Observability and BigQuery Analytics integration.
@@ -26,40 +28,57 @@ import com.google.genai.types.Part;
  */
 public final class ObservabilityDemoApp {
 
-	private static final String PROMPT = "Explain the importance of software observability in 2 sentences.";
+	private static final String PROMPT = "In one sentence, what is OpenTelemetry?";
 
 	public static void main(String[] args) throws Exception {
 		// Register model-prism providers
 		ModelProviderRegistry.registerAll();
 
-		// 1. Configure the plugins
-		// BigQueryAgentAnalyticsPlugin bqPlugin = buildBigQueryPlugin();
+		// 1. Boot OpenTelemetry BEFORE touching any ADK class.
+		InMemorySpanExporter spanExporter = new InMemorySpanExporter();
+		SdkTracerProvider tracerProvider = tracer(spanExporter);
+		OpenTelemetrySdk sdk = OpenTelemetrySdk.builder().setTracerProvider(tracerProvider).build();
+		GlobalOpenTelemetry.set(sdk);
 
 		// 2. Build the agent
-		LlmAgent agent = new ObservabilityProvider(DemoRunner.MODEL).get();
-		showAgent(agent, PROMPT);
+		LlmAgent agent = new ObservabilityAgentProvider(DemoRunner.MODEL).get();
 
-		// 3. Run the agent. The plugin will intercept events and attempt to log them.
-		ConsoleAnalyticsPlugin consolePlugin = new ConsoleAnalyticsPlugin();
-		// InMemoryRunner runner = new InMemoryRunner(agent, "observability-demo",
-		// List.of(bqPlugin, consolePlugin));
-		InMemoryRunner runner = new InMemoryRunner(agent, "observability-demo", List.of(consolePlugin));
-
-		String sessionId = UUID.randomUUID().toString();
-		RunConfig config = RunConfig.builder().autoCreateSession(true).build();
-		runner.runAsync("demo-user", sessionId, Content.fromParts(Part.fromText(PROMPT)), config).blockingSubscribe();
-
-		// Ensure the plugin's background publisher is flushed before JVM exit
-		// bqPlugin.close().blockingAwait();
+		// 3. Run the agent.
+		try {
+			runAgent(agent);
+		} finally {
+			tracerProvider.forceFlush().join(5, TimeUnit.SECONDS);
+			printSpanSummary(spanExporter.captured());
+			tracerProvider.shutdown().join(5, TimeUnit.SECONDS);
+		}
 	}
 
-	private static BigQueryAgentAnalyticsPlugin buildBigQueryPlugin() throws IOException {
-		String projectId = System.getenv().getOrDefault("GOOGLE_CLOUD_PROJECT", "demo-project-id");
-		BigQueryLoggerConfig bqConfig = BigQueryLoggerConfig.builder()//
-				.projectId(projectId)//
-				.datasetId("agent_analytics")//
-				.tableName("events").build();//
-		System.out.println("Configured BigQuery Analytics for project: " + projectId);
-		return new BigQueryAgentAnalyticsPlugin(bqConfig);
+	private static SdkTracerProvider tracer(InMemorySpanExporter spanExporter) {
+		SpanProcessor ssp = SimpleSpanProcessor.create(spanExporter);
+		return SdkTracerProvider.builder()//
+				.addSpanProcessor(ssp)//
+				.build();//
+	}
+
+	private static void runAgent(LlmAgent agent) {
+		showAgent(agent, PROMPT);
+		UsageDigest digest = new UsageDigest();
+		DemoRunner.run(agent, PROMPT, event -> {
+			digest.record(event);
+			DemoRunner.printEvent(event);
+		});
+		System.out.println();
+		System.out.println("=".repeat(70));
+		System.out.println(digest);
+	}
+
+	private static void printSpanSummary(List<SpanData> spans) {
+		System.out.println("=".repeat(70));
+		System.out.printf("OpenTelemetry spans captured: %d%n", spans.size());
+		for (SpanData s : spans) {
+			long durationMs = (s.getEndEpochNanos() - s.getStartEpochNanos()) / 1_000_000L;
+			String msg = "  . %-40s %5d ms attrs=%d%n";
+			System.out.printf(msg, s.getName(), durationMs, s.getAttributes().size());
+		}
 	}
 }

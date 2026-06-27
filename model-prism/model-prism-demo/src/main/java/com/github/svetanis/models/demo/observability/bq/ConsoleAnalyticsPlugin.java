@@ -1,4 +1,4 @@
-package com.github.svetanis.models.demo.observability;
+package com.github.svetanis.models.demo.observability.bq;
 
 import com.google.adk.agents.InvocationContext;
 import com.google.adk.events.Event;

@@ -4,8 +4,8 @@ import static java.util.Optional.ofNullable;
 
 import java.util.Optional;
 
-import com.github.svetanis.models.spi.AdkNativeOpenAiLlm;
 import com.github.svetanis.models.spi.ModelProvider;
+import com.github.svetanis.models.spi.OpenAiCompatibleLlm;
 import com.google.adk.models.BaseLlm;
 
 /**
@@ -43,7 +43,6 @@ public class GroqModelProvider implements ModelProvider {
 	@Override
 	public BaseLlm createFromBareModelName(String bareModelName) {
 		Optional<String> apiKey = ofNullable(System.getenv("GROQ_API_KEY"));
-		// return new OpenAiCompatibleLlm(bareModelName, API_URL, apiKey);
-		return new AdkNativeOpenAiLlm(bareModelName, API_URL, apiKey);
+		return new OpenAiCompatibleLlm(bareModelName, API_URL, apiKey);
 	}
 }

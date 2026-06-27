@@ -1,4 +1,4 @@
-package com.github.svetanis.models.demo.observability;
+package com.github.svetanis.models.demo.observability.bq;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -9,7 +9,7 @@ import jakarta.inject.Provider;
 /**
  * Provider class for creating the observability-demo agent.
  */
-public final class ObservabilityProvider implements Provider<LlmAgent> {
+public final class BqObservabilityAgentProvider implements Provider<LlmAgent> {
 
 	private static final String INSTRUCTION = """
 			You are a helpful assistant.
@@ -18,7 +18,7 @@ public final class ObservabilityProvider implements Provider<LlmAgent> {
 
 	private final String model;
 
-	public ObservabilityProvider(String model) {
+	public BqObservabilityAgentProvider(String model) {
 		this.model = checkNotNull(model, "model");
 	}
 

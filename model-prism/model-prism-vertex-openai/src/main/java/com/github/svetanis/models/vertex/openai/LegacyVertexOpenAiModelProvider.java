@@ -1,14 +1,17 @@
 package com.github.svetanis.models.vertex.openai;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.net.http.HttpClient;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.github.svetanis.agentic.commons.http.DefaultHttpService;
+import com.github.svetanis.agentic.commons.http.HttpService;
 import com.github.svetanis.agentic.commons.http.vertex.AccessTokenSupplier;
+import com.github.svetanis.base.serializer.DefaultOpenAiMessageSerializer;
+import com.github.svetanis.base.serializer.LegacyOpenAiCompatibleLlm;
+import com.github.svetanis.base.serializer.OpenAiMessageSerializer;
 import com.github.svetanis.models.spi.ModelProvider;
-import com.github.svetanis.models.spi.OpenAiCompatibleLlm;
 import com.google.adk.models.BaseLlm;
 
 /**
@@ -61,14 +64,15 @@ import com.google.adk.models.BaseLlm;
  * </p>
  */
 
-public class VertexOpenAiModelProvider implements ModelProvider {
+@Deprecated
+public class LegacyVertexOpenAiModelProvider implements ModelProvider {
 
 	private static final String DEFAULT_LOCATION = "us-central1";
 	private static final String BASE_URL = "https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s";
 	private static final String CHATS = "/endpoints/openapi/chat/completions";
 
 	/** No-arg constructor required by ServiceLoader. */
-	public VertexOpenAiModelProvider() {
+	public LegacyVertexOpenAiModelProvider() {
 	}
 
 	@Override
@@ -82,17 +86,17 @@ public class VertexOpenAiModelProvider implements ModelProvider {
 		String project = requireEnv("GOOGLE_CLOUD_PROJECT");
 		String location = System.getenv().getOrDefault("GOOGLE_CLOUD_LOCATION", DEFAULT_LOCATION);
 		String apiUrl = String.format(BASE_URL + CHATS, location, project, location);
-		return new OpenAiCompatibleLlm(bareModelName, apiUrl, accessToken());
-	}
-
-	private Optional<String> accessToken() {
 		AccessTokenSupplier tokens = AccessTokenSupplier.autoDetect();
-		try {
-			return Optional.of(tokens.getAccessToken());
-		} catch (IOException e) {
-			String msg = "Failed to obtain Vertex AI access token";
-			throw new UncheckedIOException(msg, e);
-		}
+		HttpClient client = HttpClient.newBuilder().build();
+		OpenAiMessageSerializer json = new DefaultOpenAiMessageSerializer();
+		HttpService http = new DefaultHttpService(client, apiUrl, () -> {
+			try {
+				return Optional.ofNullable(tokens.getAccessToken());
+			} catch (java.io.IOException e) {
+				throw new java.io.UncheckedIOException(e);
+			}
+		}, Optional.empty());
+		return new LegacyOpenAiCompatibleLlm(bareModelName, http, json);
 	}
 
 	/**
